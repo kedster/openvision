@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam AI Vision App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Webcam AI Vision</h1>
+
+        <div class="video-container">
+            <p id="permissionStatus">Awaiting camera permission...</p>
+            <video id="webcamFeed" autoplay playsinline></video>
+            <!-- Hidden canvas for capturing frames -->
+            <canvas id="captureCanvas"></canvas>
+            <div class="controls">
+                <button id="startButton">Start Webcam</button>
+                <button id="stopButton" disabled>Stop Webcam</button>
+                <span id="analysisStatus" class="status-message"></span>
+            </div>
+        </div>
+
+        <div class="interaction-area">
+            <div class="input-section">
+                <label for="promptInput">Ask a question about the video:</label>
+                <textarea id="promptInput" placeholder="e.g., What objects do you see? Describe the scene. What is the person doing?" rows="3"></textarea>
+                <div>
+                    <label for="waitTimeInput">Wait time (seconds):</label>
+                    <input type="number" id="waitTimeInput" value="2" min="1" style="width:60px;">
+                </div>
+                <button id="sendPromptButton">Analyze Frame</button>
+            </div>
+
+            <div class="output-section">
+                <label>AI Analysis Output:</label>
+                <div id="outputBox" class="output-display">
+                    Connect your webcam and click "Analyze Frame" to get started.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,175 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+.container {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    margin-top: 0;
+}
+
+.video-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    background-color: #e8e8e8;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+#permissionStatus {
+    font-style: italic;
+    color: #666;
+}
+
+#webcamFeed {
+    width: 100%;
+    max-width: 640px; /* Standard webcam width */
+    height: auto;
+    background-color: #000;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    object-fit: cover; /* Ensures video covers element */
+}
+
+/* Hidden canvas for capturing frames */
+#captureCanvas {
+    display: none;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s ease-in-out;
+}
+
+button:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.status-message {
+    font-size: 0.9em;
+    color: #555;
+}
+
+.interaction-area {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.input-section, .output-section {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #333;
+}
+
+textarea#promptInput {
+    width: calc(100% - 20px); /* Account for padding */
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+    resize: vertical;
+    min-height: 60px;
+    box-sizing: border-box; /* Include padding in width/height */
+}
+
+#sendPromptButton {
+    width: auto;
+    display: block; /* Force button to own line */
+    margin-left: auto; /* Align right */
+    margin-right: 0;
+}
+
+.output-display {
+    background-color: #e9ecef;
+    padding: 15px;
+    border-radius: 5px;
+    min-height: 100px;
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap; /* Preserve whitespace and line breaks */
+    word-wrap: break-word; /* Break long words */
+    color: #333;
+    border: 1px solid #dee2e6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+        gap: 15px;
+    }
+
+    button {
+        padding: 8px 15px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 10px;
+    }
+    h1 {
+        font-size: 1.5em;
+    }
+    textarea#promptInput {
+        font-size: 0.9rem;
+    }
+    .output-display {
+        font-size: 0.9rem;
+    }
+    #sendPromptButton {
+        width: 100%;
+    }
+}

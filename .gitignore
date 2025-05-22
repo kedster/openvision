@@ -1,8 +1,3 @@
-# Ignore all files in the openvision folder (including Backend and Frontend)
-*
-
-# But do not ignore the .gitignore file itself
-!.gitignore
 
 # Node.js dependencies
 node_modules/
