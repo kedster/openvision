@@ -1,22 +1,23 @@
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
     padding: 20px;
-    background-color: #f4f4f4;
+    background-color: #f4f7f6;
+    color: #333;
     display: flex;
     justify-content: center;
     align-items: flex-start;
     min-height: 100vh;
-    box-sizing: border-box;
 }
 
 .container {
-    background-color: #fff;
-    padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
     width: 100%;
-    max-width: 900px;
+    max-width: 1200px;
+    padding: 30px;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 25px;
@@ -24,152 +25,298 @@ body {
 
 h1 {
     text-align: center;
-    color: #333;
-    margin-top: 0;
+    color: #2c3e50;
+    margin-bottom: 25px;
+    font-size: 2.5em;
+    font-weight: 600;
 }
 
-.video-container {
+h2 {
+    color: #34495e;
+    margin-bottom: 15px;
+    font-size: 1.8em;
+}
+
+.video-section {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 15px;
-    background-color: #e8e8e8;
-    padding: 15px;
+    gap: 20px;
+    background-color: #ecf0f1;
+    padding: 20px;
     border-radius: 8px;
 }
 
-#permissionStatus {
-    font-style: italic;
-    color: #666;
+.webcam-display-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 800px; /* Max width for video */
+    background-color: #000; /* Black background for video placeholder */
+    border-radius: 8px;
+    overflow: hidden; /* Ensures video corners are rounded */
 }
 
 #webcamFeed {
     width: 100%;
-    max-width: 640px; /* Standard webcam width */
     height: auto;
-    background-color: #000;
+    display: block; /* Remove extra space below video */
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    object-fit: cover; /* Ensures video covers element */
 }
 
-/* Hidden canvas for capturing frames */
+#permissionStatus {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 1.2em;
+    font-weight: bold;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+    z-index: 1; /* Above video */
+    display: block; /* Initially visible */
+}
+
+#webcamFeed:not([srcObject]) + #permissionStatus {
+    display: block; /* Show status when video not loaded */
+}
+
+#webcamFeed[srcObject] + #permissionStatus {
+    display: none; /* Hide status when video is loaded */
+}
+
+
 #captureCanvas {
-    display: none;
+    display: none; /* Hidden canvas for frame capture */
 }
 
-.controls {
+.video-controls {
     display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: center;
     flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    width: 100%;
 }
 
-button {
-    padding: 10px 20px;
+.btn {
+    padding: 12px 25px;
     border: none;
-    border-radius: 5px;
-    background-color: #007bff;
-    color: white;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.2s ease-in-out;
+    font-size: 1em;
+    font-weight: 600;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    flex-shrink: 0; /* Prevent buttons from shrinking */
 }
 
-button:hover:not(:disabled) {
-    background-color: #0056b3;
+.btn:hover {
+    transform: translateY(-2px);
 }
 
-button:disabled {
+.btn:disabled {
     background-color: #cccccc;
     cursor: not-allowed;
+    opacity: 0.7;
+    transform: none;
 }
 
+.btn.primary { background-color: #3498db; color: white; }
+.btn.primary:hover { background-color: #2980b9; }
+
+.btn.danger { background-color: #e74c3c; color: white; }
+.btn.danger:hover { background-color: #c0392b; }
+
+.btn.success { background-color: #2ecc71; color: white; }
+.btn.success:hover { background-color: #27ae60; }
+
+.btn.warning { background-color: #f39c12; color: white; }
+.btn.warning:hover { background-color: #e67e22; }
+
+.btn.info { background-color: #1abc9c; color: white; }
+.btn.info:hover { background-color: #16a085; }
+
+
 .status-message {
+    font-size: 0.95em;
+    color: #555;
+    margin: 0 10px;
+    align-self: center;
+}
+
+.analysis-interval {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #ffffff;
+    padding: 8px 15px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
+
+.analysis-interval label {
     font-size: 0.9em;
     color: #555;
 }
 
+.analysis-interval input[type="number"] {
+    width: 60px;
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9em;
+    text-align: center;
+}
+
 .interaction-area {
     display: flex;
-    flex-direction: column;
-    gap: 20px;
+    flex-wrap: wrap;
+    gap: 25px;
 }
 
 .input-section, .output-section {
-    background-color: #f9f9f9;
-    padding: 15px;
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background-color: #ecf0f1;
+    padding: 20px;
     border-radius: 8px;
-    border: 1px solid #eee;
 }
 
 label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
-    color: #333;
+    font-weight: 600;
+    color: #34495e;
+    font-size: 1.1em;
 }
 
-textarea#promptInput {
-    width: calc(100% - 20px); /* Account for padding */
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 1rem;
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
+    font-size: 1em;
     resize: vertical;
-    min-height: 60px;
-    box-sizing: border-box; /* Include padding in width/height */
-}
-
-#sendPromptButton {
-    width: auto;
-    display: block; /* Force button to own line */
-    margin-left: auto; /* Align right */
-    margin-right: 0;
+    min-height: 80px;
+    box-sizing: border-box;
 }
 
 .output-display {
-    background-color: #e9ecef;
+    background-color: #ffffff;
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
     padding: 15px;
-    border-radius: 5px;
-    min-height: 100px;
-    max-height: 300px;
+    min-height: 120px;
     overflow-y: auto;
+    font-size: 1em;
+    line-height: 1.6;
+    color: #444;
     white-space: pre-wrap; /* Preserve whitespace and line breaks */
     word-wrap: break-word; /* Break long words */
-    color: #333;
-    border: 1px solid #dee2e6;
+}
+
+.log-section {
+    background-color: #ecf0f1;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.log-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    justify-content: flex-end; /* Align controls to the right */
+}
+
+.log-table-wrapper {
+    max-height: 400px; /* Max height for scrollable log */
+    overflow-y: auto;
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
+    background-color: #ffffff;
+}
+
+#logTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+}
+
+#logTable th, #logTable td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #ecf0f1;
+    text-align: left;
+}
+
+#logTable th {
+    background-color: #34495e;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 2; /* Keep header visible on scroll */
+}
+
+#logTable tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#logTable tbody tr:hover {
+    background-color: #eef;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .container {
-        padding: 15px;
-        gap: 15px;
+        padding: 20px;
+        gap: 20px;
     }
 
-    button {
-        padding: 8px 15px;
-        font-size: 0.9rem;
+    h1 {
+        font-size: 2em;
+    }
+
+    .video-controls, .interaction-area, .log-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .analysis-interval {
+        justify-content: center;
+    }
+
+    .input-section, .output-section {
+        min-width: unset;
+        width: 100%;
     }
 }
 
 @media (max-width: 480px) {
-    .container {
+    body {
         padding: 10px;
     }
+
+    .container {
+        padding: 15px;
+    }
+
     h1 {
-        font-size: 1.5em;
+        font-size: 1.8em;
     }
-    textarea#promptInput {
-        font-size: 0.9rem;
+
+    .btn {
+        padding: 10px 20px;
+        font-size: 0.9em;
     }
-    .output-display {
-        font-size: 0.9rem;
+
+    textarea, .output-display {
+        font-size: 0.9em;
     }
-    #sendPromptButton {
-        width: 100%;
+
+    #logTable th, #logTable td {
+        padding: 10px 12px;
+        font-size: 0.85em;
     }
 }

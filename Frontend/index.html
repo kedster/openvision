@@ -3,41 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webcam AI Vision App</title>
+    <title>AI Vision Stream</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Webcam AI Vision</h1>
+        <h1>AI Vision Stream</h1>
 
-        <div class="video-container">
-            <p id="permissionStatus">Awaiting camera permission...</p>
-            <video id="webcamFeed" autoplay playsinline></video>
-            <!-- Hidden canvas for capturing frames -->
-            <canvas id="captureCanvas"></canvas>
-            <div class="controls">
-                <button id="startButton">Start Webcam</button>
-                <button id="stopButton" disabled>Stop Webcam</button>
-                <span id="analysisStatus" class="status-message"></span>
+        <div class="video-section">
+            <div class="webcam-display-wrapper">
+                <p id="permissionStatus" class="status-message">Awaiting camera permission...</p>
+                <video id="webcamFeed" autoplay playsinline></video>
+                <!-- Hidden canvas for capturing frames -->
+                <canvas id="captureCanvas"></canvas>
+            </div>
+            <div class="video-controls">
+                <button id="startButton" class="btn primary">Start Webcam</button>
+                <button id="stopButton" class="btn danger" disabled>Stop Webcam</button>
+                <button id="toggleAnalysisButton" class="btn warning" disabled>Start Analysis</button>
+                <span id="analysisStatus" class="status-message">Analysis: Paused</span>
+                <div class="analysis-interval">
+                    <label for="analysisIntervalInput">Interval (seconds):</label>
+                    <input type="number" id="analysisIntervalInput" value="20" min="10" title="Minimum 10 seconds to reduce API costs">
+                </div>
             </div>
         </div>
 
         <div class="interaction-area">
             <div class="input-section">
-                <label for="promptInput">Ask a question about the video:</label>
-                <textarea id="promptInput" placeholder="e.g., What objects do you see? Describe the scene. What is the person doing?" rows="3"></textarea>
-                <div>
-                    <label for="waitTimeInput">Wait time (seconds):</label>
-                    <input type="number" id="waitTimeInput" value="2" min="1" style="width:60px;">
-                </div>
-                <button id="sendPromptButton">Analyze Frame</button>
+                <label for="promptInput">Your Prompt / Question:</label>
+                <textarea id="promptInput" placeholder="e.g., What objects do you see? Describe the scene. What is the person doing?" rows="4"></textarea>
+                <button id="sendPromptButton" class="btn success" disabled>Analyze Current Frame (Manual)</button>
             </div>
 
             <div class="output-section">
                 <label>AI Analysis Output:</label>
                 <div id="outputBox" class="output-display">
-                    Connect your webcam and click "Analyze Frame" to get started.
+                    Connect your webcam and start analysis to get real-time insights!
                 </div>
+            </div>
+        </div>
+
+        <div class="log-section">
+            <h2>Activity Log</h2>
+            <div class="log-controls">
+                <button id="exportCsvButton" class="btn info" disabled>Export Log to CSV</button>
+                <button id="clearLogButton" class="btn danger">Clear Log</button>
+            </div>
+            <div class="log-table-wrapper">
+                <table id="logTable">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Prompt</th>
+                            <th>AI Response</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logTableBody">
+                        <!-- Log entries will be inserted here -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

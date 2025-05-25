@@ -1,0 +1,9 @@
+name = "backend-worker" # Your worker's name
+main = "worker.js"
+compatibility_date = "2024-01-01" # Use a recent date
+
+[vars]
+# No vars needed, using secrets for API key
+
+[build]
+command = "" # No build command needed for simple JS
