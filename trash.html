@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Vision Stream - Dual Analysis</title>
+    <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+    color: white;
+}
+
+.header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.header p {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+.video-section, .prompts-section {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.video-container {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto 20px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+}
+
+#webcamFeed {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+#captureCanvas {
+    display: none;
+}
+
+.status-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-align: center;
+    transition: opacity 0.3s ease;
+}
+
+.status-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.camera-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.camera-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.camera-switch label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.camera-switch select {
+    padding: 4px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background: white;
+    font-size: 13px;
+}
+
+.btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn.primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn.primary:hover:not(:disabled) {
+    background: #0056b3;
+    transform: translateY(-2px);
+}
+
+.btn.danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn.danger:hover:not(:disabled) {
+    background: #a71e2a;
+    transform: translateY(-2px);
+}
+
+.btn.warning {
+    background: #ffc107;
+    color: #000;
+}
+
+.btn.warning:hover:not(:disabled) {
+    background: #d39e00;
+    transform: translateY(-2px);
+}
+
+.btn.success {
+    background: #28a745;
+    color: white;
+}
+
+.btn.success:hover:not(:disabled) {
+    background: #1c7430;
+    transform: translateY(-2px);
+}
+
+.btn.secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn.secondary:hover:not(:disabled) {
+    background: #545b62;
+    transform: translateY(-2px);
+}
+
+.interval-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.interval-control input {
+    width: 80px;
+    padding: 8px;
+    border: 2px solid #e9ecef;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.status-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.prompt-group {
+    margin-bottom: 20px;
+}
+
+.prompt-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.prompt-group textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    transition: border-color 0.3s ease;
+}
+
+.prompt-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+.preset-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.preset-btn {
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    background: #f8f9fa;
+    color: #495057;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.preset-btn:hover {
+    background: #e9ecef;
+    border-color: #007bff;
+    color: #007bff;
+    transform: translateY(-1px);
+}
+
+.preset-btn.repair { border-color: #fd7e14; color: #fd7e14; }
+.preset-btn.repair:hover { background: #fd7e14; color: white; }
+
+.preset-btn.nickname { border-color: #20c997; color: #20c997; }
+.preset-btn.nickname:hover { background: #20c997; color: white; }
+
+.preset-btn.identify { border-color: #6f42c1; color: #6f42c1; }
+.preset-btn.identify:hover { background: #6f42c1; color: white; }
+
+.preset-btn.nice { border-color: #e83e8c; color: #e83e8c; }
+.preset-btn.nice:hover { background: #e83e8c; color: white; }
+
+.preset-btn.poetic { border-color: #6610f2; color: #6610f2; }
+.preset-btn.poetic:hover { background: #6610f2; color: white; }
+
+.responses-table {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.table-header h3 {
+    color: #495057;
+    font-size: 1.4em;
+}
+
+.table-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.table-content {
+    max-height: 600px;
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.response-entry {
+    border-bottom: 1px solid #e9ecef;
+    padding: 20px;
+    transition: background-color 0.3s ease;
+}
+
+.response-entry:last-child {
+    border-bottom: none;
+}
+
+.response-entry:hover {
+    background-color: #f8f9fa;
+}
+
+.response-entry.error {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+}
+
+.response-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.timestamp {
+    font-weight: 600;
+    color: #495057;
+}
+
+.analysis-type {
+    background: #e9ecef;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.error-badge {
+    background: #dc3545;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.copy-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+.copy-btn:hover {
+    background: #e9ecef;
+}
+
+.analysis-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+}
+
+.analysis-section.secondary {
+    border-left-color: #28a745;
+    margin-bottom: 0;
+}
+
+.prompt-section {
+    margin-bottom: 15px;
+}
+
+.response-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 8px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.prompt-text {
+    background: white;
+    padding: 10px;
+    border-radius: 6px;
+    font-style: italic;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+}
+
+.response-text {
+    background: white;
+    padding: 12px;
+    border-radius: 6px;
+    line-height: 1.6;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid #dee2e6;
+}
+
+.response-text:hover {
+    background: #f1f3f4;
+    border-color: #007bff;
+}
+
+.loading {
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+    
+    .header h1 {
+        font-size: 2em;
+    }
+    
+    .controls {
+        justify-content: center;
+    }
+    
+    .btn {
+        flex: 1;
+        min-width: 120px;
+    }
+    
+    .preset-buttons {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .table-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .table-controls {
+        justify-content: center;
+    }
+    
+    .response-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .status-info {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .video-section, .prompts-section, .responses-table {
+        padding: 15px;
+    }
+    
+    .controls {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+    
+    .preset-buttons {
+        grid-template-columns: 1fr;
+    }
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI Vision Stream</h1>
+            <p>Real-time dual-analysis of camera feed with ChatGPT</p>
+        </div>
+
+        <div class="main-content">
+            <div class="video-section">
+                <h3 style="margin-bottom: 20px; color: #495057;">Camera Feed</h3>
+                
+                <div class="video-container">
+                    <video id="webcamFeed" autoplay playsinline muted></video>
+                    <canvas id="captureCanvas"></canvas>
+                    <div id="statusOverlay" class="status-overlay">
+                        <div>
+                            <div id="statusText">Click "Start Camera" to begin</div>
+                            <div id="loadingSpinner" class="loading" style="display: none; margin: 10px auto;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="camera-controls">
+                    <div class="camera-switch">
+                        <label for="cameraSelect">Camera:</label>
+                        <select id="cameraSelect">
+                            <option value="">Select camera...</option>
+                        </select>
+                    </div>
+                    <button id="switchCameraButton" class="btn secondary" disabled>🔄 Switch</button>
+                </div>
+
+                <div class="controls">
+                    <button id="startButton" class="btn primary">Start Camera</button>
+                    <button id="stopButton" class="btn danger" disabled>Stop Camera</button>
+                    <button id="toggleAnalysisButton" class="btn warning" disabled>Start Auto Analysis</button>
+                    <button id="analyzeNowButton" class="btn success" disabled>Analyze Now</button>
+                </div>
+
+                <div class="interval-control">
+                    <label for="analysisInterval">Auto-analysis interval:</label>
+                    <input type="number" id="analysisInterval" value="30" min="10" max="300">
+                    <span>seconds</span>
+                </div>
+
+                <div class="status-info">
+                    <div id="cameraStatus">Camera: Disconnected</div>
+                    <div id="analysisStatus">Analysis: Stopped</div>
+                </div>
+            </div>
+
+            <div class="prompts-section">
+                <h3 style="margin-bottom: 20px; color: #495057;">Analysis Prompts</h3>
+                
+                <div class="preset-buttons">
+                    <button class="preset-btn repair" onclick="setRepairPrompts()">🔧 Repair</button>
+                    <button class="preset-btn nickname" onclick="setNicknamePrompts()">🏷️ Nickname</button>
+                    <button class="preset-btn identify" onclick="setIdentifyPrompts()">🔍 Identify</button>
+                    <button class="preset-btn nice" onclick="setNicePrompts()">😊 Nice</button>
+                    <button class="preset-btn poetic" onclick="setPoeticPrompts()">📝 Poetic</button>
+                </div>
+                
+                <div class="prompt-group">
+                    <label for="primaryPrompt">Primary Analysis Prompt:</label>
+                    <textarea id="primaryPrompt" placeholder="Describe what you see in this image in detail. Focus on objects, people, activities, and the overall scene.">Describe what you see in this image in detail. Focus on objects, people, activities, and the overall scene.</textarea>
+                </div>
+
+                <div class="prompt-group">
+                    <label for="secondaryPrompt">Follow-up Analysis Prompt:</label>
+                    <textarea id="secondaryPrompt" placeholder="Based on the initial analysis, provide insights about potential actions, safety concerns, or interesting observations.">Based on the initial analysis, provide insights about potential actions, safety concerns, or interesting observations about what's happening in the scene.</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="responses-table">
+            <div class="table-header">
+                <h3>Analysis History</h3>
+                <div class="table-controls">
+                    <button id="exportButton" class="btn primary" disabled>Export CSV</button>
+                    <button id="clearButton" class="btn danger">Clear History</button>
+                </div>
+            </div>
+            <div class="table-content" id="responsesList">
+                <div style="text-align: center; padding: 40px; color: #6c757d;">
+                    No analyses yet. Start the camera and begin analysis to see results here.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+// Configuration - REPLACE WITH YOUR CLOUDFLARE WORKER URL
+const WORKER_URL = 'https://backend-worker.sethkeddy.workers.dev';
+
+// DOM Elements
+const webcamFeed = document.getElementById('webcamFeed');
+const captureCanvas = document.getElementById('captureCanvas');
+const statusOverlay = document.getElementById('statusOverlay');
+const statusText = document.getElementById('statusText');
+const loadingSpinner = document.getElementById('loadingSpinner');
+const startButton = document.getElementById('startButton');
+const stopButton = document.getElementById('stopButton');
+const toggleAnalysisButton = document.getElementById('toggleAnalysisButton');
+const analyzeNowButton = document.getElementById('analyzeNowButton');
+const analysisInterval = document.getElementById('analysisInterval');
+const cameraStatus = document.getElementById('cameraStatus');
+const analysisStatus = document.getElementById('analysisStatus');
+const primaryPrompt = document.getElementById('primaryPrompt');
+const secondaryPrompt = document.getElementById('secondaryPrompt');
+const responsesList = document.getElementById('responsesList');
+const exportButton = document.getElementById('exportButton');
+const clearButton = document.getElementById('clearButton');
+const cameraSelect = document.getElementById('cameraSelect');
+const switchCameraButton = document.getElementById('switchCameraButton');
+
+// State
+let currentStream = null;
+let analysisIntervalId = null;
+let isAnalysisRunning = false;
+let isAnalyzing = false;
+let responses = [];
+let availableCameras = [];
+let currentCameraId = null;
+
+// Preset Prompts
+const presetPrompts = {
+    repair: {
+        primary: "Carefully examine this image and identify any objects, items, or equipment that appear to be broken, damaged, worn out, or malfunctioning. Look for visible signs of wear, cracks, missing parts, or anything that seems to need repair or maintenance.",
+        secondary: "Based on the identified damaged items, provide specific repair guidance including: what tools might be needed, estimated difficulty level (easy/medium/hard), safety precautions to consider, and step-by-step repair suggestions. If no damage is visible, suggest preventive maintenance tips."
+    },
+    nickname: {
+        primary: "Look at this image and identify the most prominent or interesting person, animal, or object in focus. Describe their appearance, characteristics, and what makes them stand out in the scene.",
+        secondary: "Based on the description, create a fun, creative, and appropriate nickname for the main subject. Explain why this nickname fits them, considering their appearance, pose, activity, or personality traits that come through in the image. Make it memorable and endearing."
+    },
+    identify: {
+        primary: "Analyze this image and identify all visible objects, people, animals, plants, buildings, vehicles, and other items. Be as specific as possible with names, types, brands (if visible), and categories.",
+        secondary: "Provide additional context about the identified items including: their typical uses or purposes, interesting facts about them, how they relate to each other in the scene, and any cultural, historical, or technical significance they might have."
+    },
+    nice: {
+        primary: "Look at this image with a positive, warm perspective. Identify any people in the scene and describe what makes them special, beautiful, or admirable. Focus on positive qualities, expressions, style, or anything uplifting about them.",
+        secondary: "Create a genuine, heartfelt compliment or encouraging message for the person/people in the image. Include something that would make them smile, feel good about themselves, or brighten their day. Be specific and authentic in your praise."
+    },
+    poetic: {
+        primary: "Examine this image with an artistic eye, taking in the colors, lighting, composition, mood, and overall aesthetic. Describe the scene as if you're painting it with words, focusing on the beauty and emotional resonance.",
+        secondary: "Transform your visual analysis into a beautiful poem. It could be a haiku, free verse, rhyming couplets, or any poetic form that captures the essence, mood, and beauty of what you see. Let the image inspire your creativity and word choice."
+    }
+};
+
+// Event Listeners
+startButton.addEventListener('click', startCamera);
+stopButton.addEventListener('click', stopCamera);
+toggleAnalysisButton.addEventListener('click', toggleAutoAnalysis);
+analyzeNowButton.addEventListener('click', analyzeNow);
+exportButton.addEventListener('click', exportToCSV);
+clearButton.addEventListener('click', clearHistory);
+switchCameraButton.addEventListener('click', switchCamera);
+
+// Initialize camera list
+async function initializeCameras() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        availableCameras = devices.filter(device => device.kind === 'videoinput');
+        
+        cameraSelect.innerHTML = '<option value="">Select camera...</option>';
+        availableCameras.forEach((camera, index) => {
+            const option = document.createElement('option');
+            option.value = camera.deviceId;
+            option.textContent = camera.label || `Camera ${index + 1}`;
+            cameraSelect.appendChild(option);
+        });
+        
+        if (availableCameras.length > 0) {
+            switchCameraButton.disabled = false;
+        }
+    } catch (error) {
+        console.error('Error enumerating cameras:', error);
+    }
+}
+
+// Camera Functions
+async function startCamera(cameraId = null) {
+    try {
+        statusText.textContent = 'Requesting camera permission...';
+        loadingSpinner.style.display = 'block';
+
+        const constraints = {
+            video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        };
+
+        if (cameraId) {
+            constraints.video.deviceId = { exact: cameraId };
+            currentCameraId = cameraId;
+        } else {
+            // Try back camera first on mobile
+            constraints.video.facingMode = { ideal: 'environment' };
+        }
+
+        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+        webcamFeed.srcObject = currentStream;
+        
+        webcamFeed.onloadedmetadata = () => {
+            webcamFeed.play();
+            statusOverlay.classList.add('hidden');
+            
+            // Update UI
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            toggleAnalysisButton.disabled = false;
+            analyzeNowButton.disabled = false;
+            
+            cameraStatus.textContent = 'Camera: Connected';
+            loadingSpinner.style.display = 'none';
+            
+            // Update camera select to show active camera
+            if (!cameraId) {
+                // Get the actual camera being used
+                const videoTrack = currentStream.getVideoTracks()[0];
+                if (videoTrack) {
+                    currentCameraId = videoTrack.getSettings().deviceId;
+                    cameraSelect.value = currentCameraId || '';
+                }
+            }
+        };
+
+    } catch (error) {
+        console.error('Camera error:', error);
+        statusText.textContent = `Camera error: ${error.message}`;
+        loadingSpinner.style.display = 'none';
+        cameraStatus.textContent = `Camera: Error - ${error.message}`;
+    }
+}
+
+function stopCamera() {
+    if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+        webcamFeed.srcObject = null;
+        currentStream = null;
+        currentCameraId = null;
+    }
+
+    stopAutoAnalysis();
+    
+    // Update UI
+    statusOverlay.classList.remove('hidden');
+    statusText.textContent = 'Click "Start Camera" to begin';
+    startButton.disabled = false;
+    stopButton.disabled = true;
+    toggleAnalysisButton.disabled = true;
+    analyzeNowButton.disabled = true;
+    
+    cameraStatus.textContent = 'Camera: Disconnected';
+    analysisStatus.textContent = 'Analysis: Stopped';
+    cameraSelect.value = '';
+}
+
+function switchCamera() {
+    const selectedCameraId = cameraSelect.value;
+    if (!selectedCameraId) {
+        alert('Please select a camera from the dropdown first.');
+        return;
+    }
+    
+    if (currentStream) {
+        stopCamera();
+        setTimeout(() => startCamera(selectedCameraId), 500);
+    } else {
+        startCamera(selectedCameraId);
+    }
+}
+
+// Preset prompt functions
+function setRepairPrompts() {
+    primaryPrompt.value = presetPrompts.repair.primary;
+    secondaryPrompt.value = presetPrompts.repair.secondary;
+}
+
+function setNicknamePrompts() {
+    primaryPrompt.value = presetPrompts.nickname.primary;
+    secondaryPrompt.value = presetPrompts.nickname.secondary;
+}
+
+function setIdentifyPrompts() {
+    primaryPrompt.value = presetPrompts.identify.primary;
+    secondaryPrompt.value = presetPrompts.identify.secondary;
+}
+
+function setNicePrompts() {
+    primaryPrompt.value = presetPrompts.nice.primary;
+    secondaryPrompt.value = presetPrompts.nice.secondary;
+}
+
+function setPoeticPrompts() {
+    primaryPrompt.value = presetPrompts.poetic.primary;
+    secondaryPrompt.value = presetPrompts.poetic.secondary;
+}
+
+// Analysis Functions
+function toggleAutoAnalysis() {
+    if (isAnalysisRunning) {
+        stopAutoAnalysis();
+    } else {
+        startAutoAnalysis();
+    }
+}
+
+function startAutoAnalysis() {
+    if (!currentStream) return;
+
+    const intervalSeconds = Math.max(parseInt(analysisInterval.value), 10);
+    analysisInterval.value = intervalSeconds;
+
+    // Immediate analysis
+    analyzeFrame(false);
+
+    // Set up recurring analysis
+    analysisIntervalId = setInterval(() => {
+        analyzeFrame(false);
+    }, intervalSeconds * 1000);
+
+    isAnalysisRunning = true;
+    toggleAnalysisButton.textContent = 'Stop Auto Analysis';
+    toggleAnalysisButton.classList.remove('warning');
+    toggleAnalysisButton.classList.add('danger');
+    analysisStatus.textContent = `Analysis: Auto (every ${intervalSeconds}s)`;
+}
+
+function stopAutoAnalysis() {
+    if (analysisIntervalId) {
+        clearInterval(analysisIntervalId);
+        analysisIntervalId = null;
+    }
+
+    isAnalysisRunning = false;
+    toggleAnalysisButton.textContent = 'Start Auto Analysis';
+    toggleAnalysisButton.classList.remove('danger');
+    toggleAnalysisButton.classList.add('warning');
+    analysisStatus.textContent = 'Analysis: Stopped';
+}
+
+function analyzeNow() {
+    if (!isAnalyzing) {
+        analyzeFrame(true);
+    }
+}
+
+function captureFrame() {
+    if (!webcamFeed.videoWidth || !webcamFeed.videoHeight) {
+        return null;
+    }
+
+    captureCanvas.width = webcamFeed.videoWidth;
+    captureCanvas.height = webcamFeed.videoHeight;
+    
+    const context = captureCanvas.getContext('2d');
+    context.drawImage(webcamFeed, 0, 0, captureCanvas.width, captureCanvas.height);
+    
+    return captureCanvas.toDataURL('image/jpeg', 0.8);
+}
+
+async function analyzeFrame(isManual) {
+    if (isAnalyzing) {
+        if (isManual) {
+            alert('Analysis already in progress. Please wait...');
+        }
+        return;
+    }
+
+    // Validate prompts
+    const primaryPromptText = primaryPrompt.value.trim();
+    const secondaryPromptText = secondaryPrompt.value.trim();
+    
+    if (!primaryPromptText || !secondaryPromptText) {
+        alert('Both primary and secondary prompts are required for dual analysis.');
+        return;
+    }
+
+    isAnalyzing = true;
+    
+    // Update UI
+    analyzeNowButton.disabled = true;
+    if (isManual) {
+        analysisStatus.textContent = 'Analysis: Processing dual analysis (manual)...';
+    } else {
+        analysisStatus.textContent = 'Analysis: Processing dual analysis (auto)...';
+    }
+
+    try {
+        const imageData = captureFrame();
+        if (!imageData) {
+            throw new Error('Could not capture frame');
+        }
+
+        console.log('Sending request to:', WORKER_URL);
+        console.log('Request payload:', {
+            primaryPrompt: primaryPromptText,
+            secondaryPrompt: secondaryPromptText,
+            hasImage: !!imageData
+        });
+
+        const response = await fetch(WORKER_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                image: imageData,
+                primaryPrompt: primaryPromptText,
+                secondaryPrompt: secondaryPromptText
+            }),
+        });
+
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        // Validate response structure
+        if (!data.primaryResponse) {
+            throw new Error('Invalid response: missing primaryResponse');
+        }
+
+        // Add to responses
+        const responseEntry = {
+            timestamp: new Date().toLocaleString(),
+            primaryPrompt: primaryPromptText,
+            secondaryPrompt: secondaryPromptText,
+            primaryResponse: data.primaryResponse,
+            secondaryResponse: data.secondaryResponse || 'No secondary response',
+            isManual: isManual
+        };
+
+        responses.unshift(responseEntry);
+        updateResponsesDisplay();
+        enableExport();
+
+        console.log('Analysis completed successfully');
+
+    } catch (error) {
+        console.error('Analysis error:', error);
+        
+        const errorEntry = {
+            timestamp: new Date().toLocaleString(),
+            primaryPrompt: primaryPromptText,
+            secondaryPrompt: secondaryPromptText,
+            primaryResponse: `Error: ${error.message}`,
+            secondaryResponse: 'Analysis failed',
+            isManual: isManual,
+            isError: true
+        };
+
+        responses.unshift(errorEntry);
+        updateResponsesDisplay();
+    } finally {
+        isAnalyzing = false;
+        analyzeNowButton.disabled = false;
+        
+        if (isAnalysisRunning) {
+            const intervalSeconds = parseInt(analysisInterval.value);
+            analysisStatus.textContent = `Analysis: Auto (every ${intervalSeconds}s)`;
+        } else {
+            analysisStatus.textContent = 'Analysis: Stopped';
+        }
+    }
+}
+
+function updateResponsesDisplay() {
+    if (responses.length === 0) {
+        responsesList.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #6c757d;">
+                No analyses yet. Start the camera and begin analysis to see results here.
+            </div>
+        `;
+        return;
+    }
+
+    responsesList.innerHTML = responses.map((response, index) => `
+        <div class="response-entry ${response.isError ? 'error' : ''}" data-index="${index}">
+            <div class="response-header">
+                <span class="timestamp">${response.timestamp}</span>
+                <span class="analysis-type">${response.isManual ? 'Manual' : 'Auto'} Analysis</span>
+                ${response.isError ? '<span class="error-badge">ERROR</span>' : ''}
+                <button class="copy-btn" onclick="copyResponse(${index})" title="Copy this analysis">📋</button>
+            </div>
+            
+            <div class="analysis-section">
+                <div class="prompt-section">
+                    <div class="response-label">Primary Prompt:</div>
+                    <div class="prompt-text">${escapeHtml(response.primaryPrompt)}</div>
+                </div>
+                <div class="primary-response">
+                    <div class="response-label">Primary Analysis:</div>
+                    <div class="response-text" onclick="copyText(this)" title="Click to copy">${escapeHtml(response.primaryResponse)}</div>
+                </div>
+            </div>
+            
+            <div class="analysis-section secondary">
+                <div class="prompt-section">
+                    <div class="response-label">Follow-up Prompt:</div>
+                    <div class="prompt-text">${escapeHtml(response.secondaryPrompt)}</div>
+                </div>
+                <div class="secondary-response">
+                    <div class="response-label">Follow-up Analysis:</div>
+                    <div class="response-text" onclick="copyText(this)" title="Click to copy">${escapeHtml(response.secondaryResponse)}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function copyText(element) {
+    const text = element.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        // Visual feedback
+        const original = element.style.backgroundColor;
+        element.style.backgroundColor = '#d4edda';
+        setTimeout(() => {
+            element.style.backgroundColor = original;
+        }, 500);
+    }).catch(err => {
+        console.error('Failed to copy text:', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+    });
+}
+
+function copyResponse(index) {
+    const response = responses[index];
+    const text = `
+Timestamp: ${response.timestamp}
+Type: ${response.isManual ? 'Manual' : 'Auto'} Analysis
+
+Primary Prompt: ${response.primaryPrompt}
+Primary Response: ${response.primaryResponse}
+
+Secondary Prompt: ${response.secondaryPrompt}
+Secondary Response: ${response.secondaryResponse}
+    `.trim();
+    
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector(`[data-index="${index}"] .copy-btn`);
+        const original = btn.textContent;
+        btn.textContent = '✅';
+        setTimeout(() => {
+            btn.textContent = original;
+        }, 1000);
+    }).catch(err => {
+        console.error('Failed to copy response:', err);
+    });
+}
+
+function enableExport() {
+    exportButton.disabled = responses.length === 0;
+}
+
+function exportToCSV() {
+    if (responses.length === 0) {
+        alert('No data to export');
+        return;
+    }
+
+    const headers = [
+        'Timestamp', 
+        'Type', 
+        'Primary Prompt', 
+        'Primary Response', 
+        'Secondary Prompt', 
+        'Secondary Response',
+        'Status'
+    ];
+    const csvData = [headers];
+
+    responses.forEach(response => {
+        csvData.push([
+            response.timestamp,
+            response.isManual ? 'Manual' : 'Auto',
+            response.primaryPrompt,
+            response.primaryResponse,
+            response.secondaryPrompt,
+            response.secondaryResponse,
+            response.isError ? 'Error' : 'Success'
+        ]);
+    });
+
+    const csvContent = csvData.map(row => 
+        row.map(field => `"${String(field).replace(/"/g, '""')}"`)
+           .join(',')
+    ).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-vision-dual-analysis-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+function clearHistory() {
+    if (confirm('Clear all analysis history? This cannot be undone.')) {
+        responses = [];
+        updateResponsesDisplay();
+        enableExport();
+    }
+}
+
+// Initialize
+enableExport();
+initializeCameras();
