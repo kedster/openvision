@@ -1,5 +1,5 @@
     // Configuration - REPLACE WITH YOUR CLOUDFLARE WORKER URL
-        const WORKER_URL = 'Yhttps://backend-worker.sethkeddy.workers.dev/';
+        const WORKER_URL = 'https://backend-worker.sethkeddy.workers.dev/';
 
         // DOM Elements
         const webcamFeed = document.getElementById('webcamFeed');
