@@ -23,10 +23,12 @@ export default {
     }
 
     try {
-      const { image, prompt } = await request.json();
+      const { image, primaryPrompt, secondaryPrompt } = await request.json();
 
-      if (!image || !prompt) {
-        return new Response(JSON.stringify({ message: 'Missing image or prompt in request body.' }), {
+      if (!image || !primaryPrompt || !secondaryPrompt) {
+        return new Response(JSON.stringify({ 
+          message: 'Missing image, primaryPrompt, or secondaryPrompt in request body.' 
+        }), {
           status: 400,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
@@ -36,7 +38,9 @@ export default {
         !image.startsWith('data:image/jpeg;base64,') &&
         !image.startsWith('data:image/png;base64,')
       ) {
-        return new Response(JSON.stringify({ message: 'Invalid image format. Must be base64 JPEG/PNG.' }), {
+        return new Response(JSON.stringify({ 
+          message: 'Invalid image format. Must be base64 JPEG/PNG.' 
+        }), {
           status: 400,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
@@ -45,19 +49,22 @@ export default {
       const apiKey = env.OPENAI_API_KEY;
 
       if (!apiKey) {
-        return new Response(JSON.stringify({ message: 'API key not configured in environment.' }), {
+        return new Response(JSON.stringify({ 
+          message: 'API key not configured in environment.' 
+        }), {
           status: 500,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
       }
 
-      const openaiRequestBody = {
+      // First API call - Primary analysis
+      const primaryRequestBody = {
         model: 'gpt-4o',
         messages: [
           {
             role: 'user',
             content: [
-              { type: 'text', text: prompt },
+              { type: 'text', text: primaryPrompt },
               {
                 type: 'image_url',
                 image_url: {
@@ -68,38 +75,97 @@ export default {
             ],
           },
         ],
-        max_tokens: 500,
+        max_tokens: 300,
       };
 
-      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      const primaryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify(openaiRequestBody),
+        body: JSON.stringify(primaryRequestBody),
       });
 
-      if (!openaiResponse.ok) {
-        const errorText = await openaiResponse.text();
-        console.error('OpenAI API error:', openaiResponse.status, errorText);
-        return new Response(JSON.stringify({ message: `OpenAI error: ${errorText}` }), {
-          status: openaiResponse.status,
+      if (!primaryResponse.ok) {
+        const errorText = await primaryResponse.text();
+        console.error('OpenAI API error (primary):', primaryResponse.status, errorText);
+        return new Response(JSON.stringify({ 
+          message: `Primary analysis error: ${errorText}` 
+        }), {
+          status: primaryResponse.status,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
       }
 
-      const openaiData = await openaiResponse.json();
-      const description = openaiData.choices?.[0]?.message?.content ?? 'No description found.';
+      const primaryData = await primaryResponse.json();
+      const primaryResult = primaryData.choices?.[0]?.message?.content ?? 'No primary analysis found.';
 
-      return new Response(JSON.stringify({ description }), {
+      // Second API call - Follow-up analysis using first result
+      const secondaryRequestBody = {
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { 
+                type: 'text', 
+                text: `Based on this image analysis: "${primaryResult}"\n\n${secondaryPrompt}` 
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: image,
+                  detail: 'low',
+                },
+              },
+            ],
+          },
+        ],
+        max_tokens: 300,
+      };
+
+      const secondaryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(secondaryRequestBody),
+      });
+
+      if (!secondaryResponse.ok) {
+        const errorText = await secondaryResponse.text();
+        console.error('OpenAI API error (secondary):', secondaryResponse.status, errorText);
+        
+        // Return primary result even if secondary fails
+        return new Response(JSON.stringify({ 
+          primaryResponse: primaryResult,
+          secondaryResponse: `Secondary analysis failed: ${errorText}`,
+          timestamp: new Date().toISOString()
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
+      const secondaryData = await secondaryResponse.json();
+      const secondaryResult = secondaryData.choices?.[0]?.message?.content ?? 'No secondary analysis found.';
+
+      return new Response(JSON.stringify({ 
+        primaryResponse: primaryResult,
+        secondaryResponse: secondaryResult,
+        timestamp: new Date().toISOString()
+      }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
 
     } catch (err) {
       console.error('Worker error:', err);
-      return new Response(JSON.stringify({ message: `Internal server error: ${err.message}` }), {
+      return new Response(JSON.stringify({ 
+        message: `Internal server error: ${err.message}` 
+      }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });

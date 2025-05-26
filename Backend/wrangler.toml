@@ -1,6 +1,0 @@
-name = "backend-worker"
-type = "javascript"
-
-# no [vars] here; use secrets instead
-
-[env.production]
