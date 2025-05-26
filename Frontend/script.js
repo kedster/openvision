@@ -1,311 +1,320 @@
-// --- DOM Elements ---
-const webcamFeed = document.getElementById('webcamFeed');
-const captureCanvas = document.getElementById('captureCanvas');
-const context = captureCanvas.getContext('2d');
-const startButton = document.getElementById('startButton');
-const stopButton = document.getElementById('stopButton');
-const toggleAnalysisButton = document.getElementById('toggleAnalysisButton');
-const promptInput = document.getElementById('promptInput');
-const sendPromptButton = document.getElementById('sendPromptButton');
-const outputBox = document.getElementById('outputBox');
-const permissionStatus = document.getElementById('permissionStatus');
-const analysisStatus = document.getElementById('analysisStatus');
-const analysisIntervalInput = document.getElementById('analysisIntervalInput');
-const logTableBody = document.getElementById('logTableBody');
-const exportCsvButton = document.getElementById('exportCsvButton');
-const clearLogButton = document.getElementById('clearLogButton');
+    // Configuration - REPLACE WITH YOUR CLOUDFLARE WORKER URL
+        const WORKER_URL = 'Yhttps://backend-worker.sethkeddy.workers.dev/';
 
-// --- Global Variables ---
-let currentStream = null;
-let analysisIntervalId = null; // Stores the ID for setInterval
-let isAnalysisRunning = false;
-let isAnalyzingFrame = false; // Flag to prevent concurrent analysis calls
-const MIN_ANALYSIS_INTERVAL_MS = 10000; // Minimum interval for analysis (10 seconds)
-const CLOUDFLARE_WORKER_URL = 'YOUR_CLOUDFLARE_WORKER_URL'; // !!! IMPORTANT: REPLACE THIS WITH YOUR WORKER URL !!!
-const backendUrl = 'https://api.example.com/analyze-video';
+        // DOM Elements
+        const webcamFeed = document.getElementById('webcamFeed');
+        const captureCanvas = document.getElementById('captureCanvas');
+        const statusOverlay = document.getElementById('statusOverlay');
+        const statusText = document.getElementById('statusText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const toggleAnalysisButton = document.getElementById('toggleAnalysisButton');
+        const analyzeNowButton = document.getElementById('analyzeNowButton');
+        const analysisInterval = document.getElementById('analysisInterval');
+        const cameraStatus = document.getElementById('cameraStatus');
+        const analysisStatus = document.getElementById('analysisStatus');
+        const primaryPrompt = document.getElementById('primaryPrompt');
+        const secondaryPrompt = document.getElementById('secondaryPrompt');
+        const responsesList = document.getElementById('responsesList');
+        const exportButton = document.getElementById('exportButton');
+        const clearButton = document.getElementById('clearButton');
 
-// --- Event Listeners ---
-startButton.addEventListener('click', startWebcam);
-stopButton.addEventListener('click', stopWebcam);
-toggleAnalysisButton.addEventListener('click', toggleAnalysis);
-sendPromptButton.addEventListener('click', () => performAnalysis(true)); // True for manual trigger
-exportCsvButton.addEventListener('click', exportLogToCSV);
-clearLogButton.addEventListener('click', clearLog);
-analysisIntervalInput.addEventListener('change', () => {
-    // Ensure value is at least MIN_ANALYSIS_INTERVAL_MS / 1000
-    let val = parseInt(analysisIntervalInput.value, 10);
-    if (isNaN(val) || val < (MIN_ANALYSIS_INTERVAL_MS / 1000)) {
-        analysisIntervalInput.value = (MIN_ANALYSIS_INTERVAL_MS / 1000);
-    }
-    // If analysis is running, restart it with new interval
-    if (isAnalysisRunning) {
-        toggleAnalysis(); // Stop current
-        toggleAnalysis(); // Start with new interval
-    }
-});
+        // State
+        let currentStream = null;
+        let analysisIntervalId = null;
+        let isAnalysisRunning = false;
+        let isAnalyzing = false;
+        let responses = [];
 
-// --- Webcam Functions ---
-async function startWebcam() {
-    permissionStatus.textContent = 'Requesting camera permission...';
-    outputBox.textContent = 'Connecting to webcam...';
+        // Event Listeners
+        startButton.addEventListener('click', startCamera);
+        stopButton.addEventListener('click', stopCamera);
+        toggleAnalysisButton.addEventListener('click', toggleAutoAnalysis);
+        analyzeNowButton.addEventListener('click', analyzeNow);
+        exportButton.addEventListener('click', exportToCSV);
+        clearButton.addEventListener('click', clearHistory);
 
-    try {
-        currentStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        webcamFeed.srcObject = currentStream;
-        webcamFeed.onloadedmetadata = () => {
-            webcamFeed.play();
-            startButton.disabled = true;
-            stopButton.disabled = false;
-            toggleAnalysisButton.disabled = false;
-            sendPromptButton.disabled = false;
-            permissionStatus.textContent = 'Webcam connected.';
-            outputBox.textContent = 'Webcam connected. You can now start real-time analysis or manually analyze a frame.';
-            enableExportButton(); // Enable export if log might be filled later
-        };
-    } catch (err) {
-        console.error("Error accessing webcam:", err);
-        outputBox.textContent = `Error: Could not access webcam. Please ensure it's connected and you've granted permission. (${err.name}: ${err.message})`;
-        permissionStatus.textContent = 'Error: Camera access denied or not available.';
-        startButton.disabled = false;
-        stopButton.disabled = true;
-        toggleAnalysisButton.disabled = true;
-        sendPromptButton.disabled = true;
-        updateLog("Webcam Error", `Failed to start webcam: ${err.message}`, "N/A", true);
-    }
-}
+        // Camera Functions
+        async function startCamera() {
+            try {
+                statusText.textContent = 'Requesting camera permission...';
+                loadingSpinner.style.display = 'block';
 
-function stopWebcam() {
-    if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-        webcamFeed.srcObject = null;
-        currentStream = null;
-        startButton.disabled = false;
-        stopButton.disabled = true;
-        sendPromptButton.disabled = true;
-        toggleAnalysisButton.disabled = true;
-        outputBox.textContent = 'Webcam stopped.';
-        permissionStatus.textContent = 'Webcam disconnected.';
-        analysisStatus.textContent = 'Analysis: Paused';
-        toggleAnalysisButton.textContent = 'Start Analysis';
-        stopAnalysis(); // Ensure analysis is stopped
-        updateLog("Webcam Control", "Webcam stopped.", "N/A");
-    }
-}
+                currentStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'user'
+                    } 
+                });
 
-// --- Analysis Control ---
-function toggleAnalysis() {
-    if (isAnalysisRunning) {
-        stopAnalysis();
-        toggleAnalysisButton.textContent = 'Start Analysis';
-        toggleAnalysisButton.classList.remove('danger');
-        toggleAnalysisButton.classList.add('warning');
-        analysisStatus.textContent = 'Analysis: Paused';
-        updateLog("Analysis Control", "Real-time analysis paused.", "N/A");
-    } else {
-        startAnalysis();
-        toggleAnalysisButton.textContent = 'Pause Analysis';
-        toggleAnalysisButton.classList.remove('warning');
-        toggleAnalysisButton.classList.add('danger');
-        analysisStatus.textContent = `Analysis: Running (every ${analysisIntervalInput.value}s)`;
-        updateLog("Analysis Control", "Real-time analysis started.", "N/A");
-    }
-}
+                webcamFeed.srcObject = currentStream;
+                
+                webcamFeed.onloadedmetadata = () => {
+                    webcamFeed.play();
+                    statusOverlay.classList.add('hidden');
+                    
+                    // Update UI
+                    startButton.disabled = true;
+                    stopButton.disabled = false;
+                    toggleAnalysisButton.disabled = false;
+                    analyzeNowButton.disabled = false;
+                    
+                    cameraStatus.textContent = 'Camera: Connected';
+                    loadingSpinner.style.display = 'none';
+                };
 
-function startAnalysis() {
-    if (!currentStream) {
-        outputBox.textContent = "Please start the webcam first to begin analysis.";
-        analysisStatus.textContent = 'Analysis: Not started (Webcam off)';
-        return;
-    }
-    stopAnalysis(); // Clear any existing interval first
-
-    const intervalMs = Math.max(parseInt(analysisIntervalInput.value, 10) * 1000, MIN_ANALYSIS_INTERVAL_MS);
-    analysisIntervalInput.value = intervalMs / 1000; // Update input to ensure minimum value
-
-    // Perform an immediate analysis upon starting
-    performAnalysis(false); // false for auto-triggered
-
-    // Set up the recurring analysis
-    analysisIntervalId = setInterval(() => {
-        performAnalysis(false); // false for auto-triggered
-    }, intervalMs);
-
-    isAnalysisRunning = true;
-}
-
-function stopAnalysis() {
-    if (analysisIntervalId) {
-        clearInterval(analysisIntervalId);
-        analysisIntervalId = null;
-    }
-    isAnalysisRunning = false;
-    isAnalyzingFrame = false; // Reset flag
-}
-
-// --- Frame Capture & AI Interaction ---
-function captureFrame() {
-    if (!webcamFeed.videoWidth || !webcamFeed.videoHeight) {
-        console.warn("Video feed not ready for capture.");
-        return null;
-    }
-    // Set canvas dimensions to match video feed
-    captureCanvas.width = webcamFeed.videoWidth;
-    captureCanvas.height = webcamFeed.videoHeight;
-    // Draw the current video frame onto the canvas
-    context.drawImage(webcamFeed, 0, 0, captureCanvas.width, captureCanvas.height);
-    // Get the image data as a Base64 encoded JPEG
-    return captureCanvas.toDataURL('image/jpeg', 0.8); // 0.8 is JPEG quality
-}
-
-async function performAnalysis(isManual = false) {
-    if (isAnalyzingFrame) {
-        // console.log("Analysis already in progress, skipping frame.");
-        // If it's a manual trigger and analysis is ongoing, show a message
-        if (isManual) {
-            outputBox.textContent = "An analysis is already running. Please wait for it to complete.";
-        }
-        return;
-    }
-    if (!currentStream) {
-        outputBox.textContent = "Webcam is not active. Please start the webcam.";
-        return;
-    }
-
-    isAnalyzingFrame = true; // Set flag
-    sendPromptButton.disabled = true; // Disable manual button during analysis
-
-    const imageData = captureFrame();
-    if (!imageData) {
-        outputBox.textContent = "Could not capture frame. Is webcam running and playing?";
-        isAnalyzingFrame = false;
-        sendPromptButton.disabled = false;
-        return;
-    }
-
-    let promptText = promptInput.value.trim();
-    if (promptText === "") {
-        promptText = "Describe the main objects and activities visible in this image. Keep it concise.";
-        // Optionally, update the input field to show the default
-        // promptInput.value = promptText;
-    }
-
-    outputBox.textContent = "Sending frame to AI for analysis...";
-    analysisStatus.textContent = isManual ? "Manually Analyzing..." : "Analyzing (auto)...";
-
-    let aiResponse = "No response.";
-    try {
-        const response = await fetch(CLOUDFLARE_WORKER_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ image: imageData, prompt: promptText }),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: 'No detailed error message from worker.' }));
-            throw new Error(`Backend error: ${response.status} - ${errorData.message || 'Unknown error'}`);
-        }
-
-        const data = await response.json();
-        aiResponse = data.description || "No description received from AI.";
-        outputBox.textContent = aiResponse;
-        analysisStatus.textContent = isManual ? `Manual analysis done.` : `Analysis: Running (next in ${analysisIntervalInput.value}s)`;
-
-    } catch (error) {
-        console.error("Error during analysis:", error);
-        aiResponse = `Analysis failed: ${error.message}. Make sure your Cloudflare Worker URL is correct and deployed.`;
-        outputBox.textContent = aiResponse;
-        analysisStatus.textContent = `Analysis failed.`;
-        updateLog(promptText, aiResponse, "Error", true); // Log error
-    } finally {
-        isAnalyzingFrame = false; // Reset flag
-        sendPromptButton.disabled = false; // Re-enable manual button
-        updateLog(promptText, aiResponse, isManual ? "Manual" : "Auto");
-    }
-}
-
-// --- Log Management ---
-function updateLog(prompt, response, type, isError = false) {
-    const timestamp = new Date().toLocaleString();
-    const row = logTableBody.insertRow(0); // Insert at top
-    // Add classes for styling (e.g., error rows)
-    if (isError) {
-        row.classList.add('log-error');
-    } else if (type === "Manual") {
-        row.classList.add('log-manual');
-    }
-
-    const cell1 = row.insertCell(0);
-    const cell2 = row.insertCell(1);
-    const cell3 = row.insertCell(2);
-
-    cell1.textContent = timestamp;
-    cell2.textContent = prompt;
-    cell3.textContent = response;
-
-    enableExportButton();
-}
-
-function enableExportButton() {
-    if (logTableBody.rows.length > 0) {
-        exportCsvButton.disabled = false;
-    } else {
-        exportCsvButton.disabled = true;
-    }
-}
-
-function clearLog() {
-    if (confirm("Are you sure you want to clear all log entries? This action cannot be undone.")) {
-        logTableBody.innerHTML = ''; // Clear all rows
-        enableExportButton(); // Disable export button
-        updateLog("Log Control", "Log cleared.", "N/A");
-    }
-}
-
-function exportLogToCSV() {
-    const rows = logTableBody.querySelectorAll('tr');
-    if (rows.length === 0) {
-        alert("No log data to export.");
-        return;
-    }
-
-    let csvContent = "data:text/csv;charset=utf-8,";
-    const headers = ["Timestamp", "Prompt", "AI Response"];
-    csvContent += headers.join(",") + "\r\n";
-
-    rows.forEach(row => {
-        const rowData = Array.from(row.cells).map(cell => {
-            let text = cell.textContent;
-            // Handle commas and quotes in text
-            text = text.replace(/"/g, '""'); // Escape double quotes
-            if (text.includes(',') || text.includes('\n')) {
-                text = `"${text}"`; // Enclose in quotes if it contains commas or newlines
+            } catch (error) {
+                console.error('Camera error:', error);
+                statusText.textContent = `Camera error: ${error.message}`;
+                loadingSpinner.style.display = 'none';
+                cameraStatus.textContent = `Camera: Error - ${error.message}`;
             }
-            return text;
-        });
-        csvContent += rowData.join(",") + "\r\n";
-    });
+        }
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `ai_vision_log_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link); // Required for Firefox
-    link.click();
-    document.body.removeChild(link); // Clean up
-    updateLog("Log Control", "Log exported to CSV.", "N/A");
-}
+        function stopCamera() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                webcamFeed.srcObject = null;
+                currentStream = null;
+            }
 
-// --- Initial State ---
-window.onload = () => {
-    startButton.disabled = false;
-    stopButton.disabled = true;
-    toggleAnalysisButton.disabled = true;
-    sendPromptButton.disabled = true;
-    analysisIntervalInput.value = (MIN_ANALYSIS_INTERVAL_MS / 1000); // Set default minimum
-    outputBox.textContent = 'Click "Start Webcam" to begin.';
-    permissionStatus.textContent = 'Awaiting camera permission...';
-    enableExportButton(); // Check initial log state
-    updateLog("App Start", "Application loaded.", "N/A");
-};
+            stopAutoAnalysis();
+            
+            // Update UI
+            statusOverlay.classList.remove('hidden');
+            statusText.textContent = 'Click "Start Camera" to begin';
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            toggleAnalysisButton.disabled = true;
+            analyzeNowButton.disabled = true;
+            
+            cameraStatus.textContent = 'Camera: Disconnected';
+            analysisStatus.textContent = 'Analysis: Stopped';
+        }
+
+        // Analysis Functions
+        function toggleAutoAnalysis() {
+            if (isAnalysisRunning) {
+                stopAutoAnalysis();
+            } else {
+                startAutoAnalysis();
+            }
+        }
+
+        function startAutoAnalysis() {
+            if (!currentStream) return;
+
+            const intervalSeconds = Math.max(parseInt(analysisInterval.value), 10);
+            analysisInterval.value = intervalSeconds;
+
+            // Immediate analysis
+            analyzeFrame(false);
+
+            // Set up recurring analysis
+            analysisIntervalId = setInterval(() => {
+                analyzeFrame(false);
+            }, intervalSeconds * 1000);
+
+            isAnalysisRunning = true;
+            toggleAnalysisButton.textContent = 'Stop Auto Analysis';
+            toggleAnalysisButton.classList.remove('warning');
+            toggleAnalysisButton.classList.add('danger');
+            analysisStatus.textContent = `Analysis: Auto (every ${intervalSeconds}s)`;
+        }
+
+        function stopAutoAnalysis() {
+            if (analysisIntervalId) {
+                clearInterval(analysisIntervalId);
+                analysisIntervalId = null;
+            }
+
+            isAnalysisRunning = false;
+            toggleAnalysisButton.textContent = 'Start Auto Analysis';
+            toggleAnalysisButton.classList.remove('danger');
+            toggleAnalysisButton.classList.add('warning');
+            analysisStatus.textContent = 'Analysis: Stopped';
+        }
+
+        function analyzeNow() {
+            if (!isAnalyzing) {
+                analyzeFrame(true);
+            }
+        }
+
+        function captureFrame() {
+            if (!webcamFeed.videoWidth || !webcamFeed.videoHeight) {
+                return null;
+            }
+
+            captureCanvas.width = webcamFeed.videoWidth;
+            captureCanvas.height = webcamFeed.videoHeight;
+            
+            const context = captureCanvas.getContext('2d');
+            context.drawImage(webcamFeed, 0, 0, captureCanvas.width, captureCanvas.height);
+            
+            return captureCanvas.toDataURL('image/jpeg', 0.8);
+        }
+
+        async function analyzeFrame(isManual) {
+            if (isAnalyzing) {
+                if (isManual) {
+                    alert('Analysis already in progress. Please wait...');
+                }
+                return;
+            }
+
+            isAnalyzing = true;
+            
+            // Update UI
+            analyzeNowButton.disabled = true;
+            if (isManual) {
+                analysisStatus.textContent = 'Analysis: Processing (manual)...';
+            } else {
+                analysisStatus.textContent = 'Analysis: Processing (auto)...';
+            }
+
+            try {
+                const imageData = captureFrame();
+                if (!imageData) {
+                    throw new Error('Could not capture frame');
+                }
+
+                const response = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image: imageData,
+                        primaryPrompt: primaryPrompt.value.trim() || 'Describe what you see in this image.',
+                        secondaryPrompt: secondaryPrompt.value.trim() || 'Provide additional insights about this scene.'
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Add to responses
+                const responseEntry = {
+                    timestamp: new Date().toLocaleString(),
+                    primaryPrompt: primaryPrompt.value.trim(),
+                    secondaryPrompt: secondaryPrompt.value.trim(),
+                    primaryResponse: data.primaryResponse,
+                    secondaryResponse: data.secondaryResponse,
+                    isManual: isManual
+                };
+
+                responses.unshift(responseEntry);
+                updateResponsesDisplay();
+                enableExport();
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                
+                const errorEntry = {
+                    timestamp: new Date().toLocaleString(),
+                    primaryPrompt: primaryPrompt.value.trim(),
+                    secondaryPrompt: secondaryPrompt.value.trim(),
+                    primaryResponse: `Error: ${error.message}`,
+                    secondaryResponse: 'Analysis failed',
+                    isManual: isManual,
+                    isError: true
+                };
+
+                responses.unshift(errorEntry);
+                updateResponsesDisplay();
+            } finally {
+                isAnalyzing = false;
+                analyzeNowButton.disabled = false;
+                
+                if (isAnalysisRunning) {
+                    const intervalSeconds = parseInt(analysisInterval.value);
+                    analysisStatus.textContent = `Analysis: Auto (every ${intervalSeconds}s)`;
+                } else {
+                    analysisStatus.textContent = 'Analysis: Stopped';
+                }
+            }
+        }
+
+        function updateResponsesDisplay() {
+            if (responses.length === 0) {
+                responsesList.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #6c757d;">
+                        No analyses yet. Start the camera and begin analysis to see results here.
+                    </div>
+                `;
+                return;
+            }
+
+            responsesList.innerHTML = responses.map(response => `
+                <div class="response-entry ${response.isError ? 'error' : ''}">
+                    <div class="response-header">
+                        ${response.timestamp} • ${response.isManual ? 'Manual' : 'Auto'} Analysis
+                        ${response.isError ? ' • ERROR' : ''}
+                    </div>
+                    <div class="primary-response">
+                        <div class="response-label">Primary Analysis</div>
+                        <div class="response-text">${response.primaryResponse}</div>
+                    </div>
+                    <div class="secondary-response">
+                        <div class="response-label">Follow-up Analysis</div>
+                        <div class="response-text">${response.secondaryResponse}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function enableExport() {
+            exportButton.disabled = responses.length === 0;
+        }
+
+        function exportToCSV() {
+            if (responses.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            const headers = ['Timestamp', 'Type', 'Primary Prompt', 'Primary Response', 'Secondary Prompt', 'Secondary Response'];
+            const csvData = [headers];
+
+            responses.forEach(response => {
+                csvData.push([
+                    response.timestamp,
+                    response.isManual ? 'Manual' : 'Auto',
+                    response.primaryPrompt,
+                    response.primaryResponse,
+                    response.secondaryPrompt,
+                    response.secondaryResponse
+                ]);
+            });
+
+            const csvContent = csvData.map(row => 
+                row.map(field => `"${String(field).replace(/"/g, '""')}"`)
+                   .join(',')
+            ).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ai-vision-analysis-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function clearHistory() {
+            if (confirm('Clear all analysis history? This cannot be undone.')) {
+                responses = [];
+                updateResponsesDisplay();
+                enableExport();
+            }
+        }
+
+        // Initialize
+        enableExport();
