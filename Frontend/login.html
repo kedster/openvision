@@ -1,0 +1,28 @@
+<!-- login.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AI Vision Stream</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Login to AI Vision Stream</h1>
+            <p>Secure access via Google SSO</p>
+        </div>
+        <div class="main-content" style="text-align: center;">
+            <button class="btn primary" onclick="googleLogin()">Login with Google</button>
+        </div>
+    </div>
+
+    <script>
+        function googleLogin() {
+            // Replace with actual OAuth redirect logic or Firebase
+            window.location.href = 'https://your-auth-provider.com/google-login';
+        }
+    </script>
+</body>
+</html>

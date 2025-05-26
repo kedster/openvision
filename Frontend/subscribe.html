@@ -1,0 +1,34 @@
+<!-- subscribe.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscribe - AI Vision Stream</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Subscribe to AI Vision Stream</h1>
+            <p>Start your subscription to unlock full features</p>
+        </div>
+        <div class="main-content" style="text-align: center;">
+            <button class="btn success" id="checkout-button">Subscribe - $10/mo</button>
+        </div>
+    </div>
+
+    <script>
+        const stripe = Stripe('your-publishable-key');
+        document.getElementById('checkout-button').addEventListener('click', function () {
+            fetch('/create-checkout-session', {
+                method: 'POST'
+            })
+            .then(res => res.json())
+            .then(session => stripe.redirectToCheckout({ sessionId: session.id }))
+            .catch(err => console.error(err));
+        });
+    </script>
+</body>
+</html>

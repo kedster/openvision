@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- Basic SEO -->
+<title>My App Name</title>
+<meta name="description" content="A short but meaningful description of your app">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#007bff">
+
+<!-- Canonical URL -->
+<link rel="canonical" href="https://www.example.com/">
+
+<!-- Open Graph (for Facebook, LinkedIn, etc.) -->
+<meta property="og:title" content="My App Name">
+<meta property="og:description" content="A short but meaningful description of your app">
+<meta property="og:image" content="https://www.example.com/og-image.jpg">
+<meta property="og:url" content="https://www.example.com/">
+<meta property="og:type" content="website">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="My App Name">
+<meta name="twitter:description" content="A short but meaningful description of your app">
+<meta name="twitter:image" content="https://www.example.com/og-image.jpg">
+
+  <title>AI Vision Stream - Smarter Camera AI</title>
+  <link rel="stylesheet" href="style.css"/>
+  <!-- Favicon Basics -->
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+
+<!-- Manifest for PWA support -->
+<link rel="manifest" href="/site.webmanifest">
+
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>AI Vision Stream</h1>
+      <p>Unlock Real-Time Vision Intelligence with ChatGPT</p>
+    </div>
+
+    <!-- HERO SECTION -->
+    <section class="main-content" style="text-align: center;">
+      <h2 style="font-size: 2em; margin-bottom: 20px; color: #212529;">Transform Your Camera Into a Smart AI Assistant</h2>
+      <p style="font-size: 1.2em; margin-bottom: 30px; color: #495057;">
+        Monitor, analyze, and act in real-time with our dual-layer ChatGPT-powered camera feed tool.<br/>
+        No code. No bloat. Just insights.
+      </p>
+      <a href="login.html" class="btn primary" style="margin-right: 10px;">Try Now Free</a>
+      <a href="subscribe.html" class="btn success">Subscribe</a>
+    </section>
+
+    <!-- FEATURES SECTION -->
+    <section class="main-content" style="margin-top: 60px;">
+      <h3 style="text-align: center; color: #343a40;">What You Get</h3>
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-around; margin-top: 20px;">
+        <div style="flex: 1; min-width: 250px; padding: 20px;">
+          <h4 style="color: #212529;">📷 Live Feed AI Analysis</h4>
+          <p style="color: #6c757d;">Stream camera input and get real-time descriptions, context, and safety cues from ChatGPT.</p>
+        </div>
+        <div style="flex: 1; min-width: 250px; padding: 20px;">
+          <h4 style="color: #212529;">⚡ Dual Prompt Layers</h4>
+          <p style="color: #6c757d;">Use primary + secondary prompts for deeper, chained insight generation.</p>
+        </div>
+        <div style="flex: 1; min-width: 250px; padding: 20px;">
+          <h4 style="color: #212529;">📈 Instant Insights</h4>
+          <p style="color: #6c757d;">Export structured CSV data from your analysis history — perfect for review or reporting.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRODUCT SCREENSHOT -->
+    <section class="main-content" style="margin-top: 40px; text-align: center;">
+      <img src="screenshot.png" alt="App Screenshot" style="max-width: 90%; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);" />
+      <p style="color: #6c757d; margin-top: 10px;">Live example from the app interface</p>
+    </section>
+
+    <!-- CTA / PRICING -->
+    <section class="main-content" style="margin-top: 60px; text-align: center;">
+      <h3 style="color: #212529;">Simple Pricing</h3>
+      <p style="font-size: 1.1em; color: #495057;">Start for free. Upgrade when you're ready.</p>
+      <div style="margin-top: 20px;">
+        <div style="display: inline-block; padding: 30px; background: #f8f9fa; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+          <h4 style="color: #212529;">Pro Plan - $9/mo</h4>
+          <ul style="list-style: none; padding: 0; color: #495057;">
+            <li>✅ Unlimited analyses</li>
+            <li>✅ Full resolution video processing</li>
+            <li>✅ CSV exports + API access</li>
+          </ul>
+          <a href="subscribe.html" class="btn success" style="margin-top: 15px;">Subscribe Now</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <div style="text-align: center; margin-top: 60px; color: #adb5bd; font-size: 0.9em;">
+      &copy; 2025 AI Vision Stream – Built for automation. Hosted with ❤️
+    </div>
+  </div>
+  <script>
+    // Check if we're coming back from Google login
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("code")) {
+      fetch(`/api/oauth/callback?code=${params.get("code")}`)
+        .then(r => r.json())
+        .then(data => {
+          localStorage.setItem("id_token", data.id_token);
+          document.getElementById("auth-status").innerText = "Logged in!";
+          document.getElementById("payment").style.display = "block";
+        });
+    }
+
+    document.getElementById("login").onclick = () => {
+      window.location.href = "/api/oauth/start";
+    };
+
+    document.getElementById("buy").onclick = () => {
+      fetch("/api/create-checkout-session", { method: "POST" })
+        .then(res => res.json())
+        .then(data => window.location.href = data.url);
+    };
+  </script>
+</body>
+</html>
