@@ -157,90 +157,88 @@
             return captureCanvas.toDataURL('image/jpeg', 0.8);
         }
 
-        async function analyzeFrame(isManual) {
-            if (isAnalyzing) {
-                if (isManual) {
-                    alert('Analysis already in progress. Please wait...');
-                }
-                return;
-            }
-
-            isAnalyzing = true;
-            
-            // Update UI
-            analyzeNowButton.disabled = true;
-            if (isManual) {
-                analysisStatus.textContent = 'Analysis: Processing (manual)...';
-            } else {
-                analysisStatus.textContent = 'Analysis: Processing (auto)...';
-            }
-
-            try {
-                const imageData = captureFrame();
-                if (!imageData) {
-                    throw new Error('Could not capture frame');
-                }
-
-                const response = await fetch(WORKER_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        image: imageData,
-                        primaryPrompt: primaryPrompt.value.trim() || 'Describe what you see in this image.',
-                        secondaryPrompt: secondaryPrompt.value.trim() || 'Provide additional insights about this scene.'
-                    }),
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || `HTTP ${response.status}`);
-                }
-
-                const data = await response.json();
-                
-                // Add to responses
-                const responseEntry = {
-                    timestamp: new Date().toLocaleString(),
-                    primaryPrompt: primaryPrompt.value.trim(),
-                    secondaryPrompt: secondaryPrompt.value.trim(),
-                    primaryResponse: data.primaryResponse,
-                    secondaryResponse: data.secondaryResponse,
-                    isManual: isManual
-                };
-
-                responses.unshift(responseEntry);
-                updateResponsesDisplay();
-                enableExport();
-
-            } catch (error) {
-                console.error('Analysis error:', error);
-                
-                const errorEntry = {
-                    timestamp: new Date().toLocaleString(),
-                    primaryPrompt: primaryPrompt.value.trim(),
-                    secondaryPrompt: secondaryPrompt.value.trim(),
-                    primaryResponse: `Error: ${error.message}`,
-                    secondaryResponse: 'Analysis failed',
-                    isManual: isManual,
-                    isError: true
-                };
-
-                responses.unshift(errorEntry);
-                updateResponsesDisplay();
-            } finally {
-                isAnalyzing = false;
-                analyzeNowButton.disabled = false;
-                
-                if (isAnalysisRunning) {
-                    const intervalSeconds = parseInt(analysisInterval.value);
-                    analysisStatus.textContent = `Analysis: Auto (every ${intervalSeconds}s)`;
-                } else {
-                    analysisStatus.textContent = 'Analysis: Stopped';
-                }
-            }
+ async function analyzeFrame(isManual) {
+    if (isAnalyzing) {
+        if (isManual) {
+            alert('Analysis already in progress. Please wait...');
         }
+        return;
+    }
+
+    isAnalyzing = true;
+
+    // Update UI
+    analyzeNowButton.disabled = true;
+    if (isManual) {
+        analysisStatus.textContent = 'Analysis: Processing (manual)...';
+    } else {
+        analysisStatus.textContent = 'Analysis: Processing (auto)...';
+    }
+
+    try {
+        const imageData = captureFrame();
+        if (!imageData) {
+            throw new Error('Could not capture frame');
+        }
+
+        const response = await fetch(WORKER_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                primaryPrompt: primaryPrompt.value.trim() || 'Describe what you see in this image.',
+                secondaryPrompt: secondaryPrompt.value.trim() || 'Provide additional insights about this scene.'
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        const responseEntry = {
+            timestamp: new Date().toLocaleString(),
+            primaryPrompt: primaryPrompt.value.trim(),
+            secondaryPrompt: secondaryPrompt.value.trim(),
+            primaryResponse: data.reply || 'No reply',
+            secondaryResponse: 'Response parsed successfully.',
+            isManual: isManual
+        };
+
+        responses.unshift(responseEntry);
+        updateResponsesDisplay();
+        enableExport();
+
+    } catch (error) {
+        console.error('Analysis error:', error);
+
+        const errorEntry = {
+            timestamp: new Date().toLocaleString(),
+            primaryPrompt: primaryPrompt.value.trim(),
+            secondaryPrompt: secondaryPrompt.value.trim(),
+            primaryResponse: `Error: ${error.message}`,
+            secondaryResponse: 'Analysis failed',
+            isManual: isManual,
+            isError: true
+        };
+
+        responses.unshift(errorEntry);
+        updateResponsesDisplay();
+    } finally {
+        isAnalyzing = false;
+        analyzeNowButton.disabled = false;
+
+        if (isAnalysisRunning) {
+            const intervalSeconds = parseInt(analysisInterval.value);
+            analysisStatus.textContent = `Analysis: Auto (every ${intervalSeconds}s)`;
+        } else {
+            analysisStatus.textContent = 'Analysis: Stopped';
+        }
+    }
+}
 
         function updateResponsesDisplay() {
             if (responses.length === 0) {
