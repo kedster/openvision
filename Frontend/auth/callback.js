@@ -15,7 +15,7 @@ export async function handleOAuthCallback() {
 
   try {
     // Send the code to your backend worker to exchange for tokens & create a session
-    const response = await fetch('https://backend-worker.sethkeddy.workers.dev/auth/google/callback', {
+    const response = await fetch('backend.openvision.quiktek.net/auth/google/callback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code }),

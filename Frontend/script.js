@@ -1,5 +1,5 @@
 // Configuration - REPLACE WITH YOUR CLOUDFLARE WORKER URL
-const WORKER_URL = 'https://backend-worker.sethkeddy.workers.dev';
+const WORKER_URL = 'https://backend.openvision.quiktek.net';
 
 // DOM Elements
 const webcamFeed = document.getElementById('webcamFeed');
