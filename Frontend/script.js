@@ -1,5 +1,5 @@
 // Configuration - REPLACE WITH YOUR CLOUDFLARE WORKER URL
-const WORKER_URL = 'https://backend.openvision.quiktek.net';
+const WORKER_URL = 'https://backend.openvision.quiktek.net/chatgpt/';
 
 // DOM Elements
 const webcamFeed = document.getElementById('webcamFeed');
