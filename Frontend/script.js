@@ -12,8 +12,7 @@
         const toggleAnalysisButton = document.getElementById('toggleAnalysisButton');
         const analyzeNowButton = document.getElementById('analyzeNowButton');
         const analysisInterval = document.getElementById('analysisInterval');
-        const cameraS
-        tatus = document.getElementById('cameraStatus');
+        const cameraStatus = document.getElementById('cameraStatus');
         const analysisStatus = document.getElementById('analysisStatus');
         const primaryPrompt = document.getElementById('primaryPrompt');
         const secondaryPrompt = document.getElementById('secondaryPrompt');
@@ -158,159 +157,118 @@
             return captureCanvas.toDataURL('image/jpeg', 0.8);
         }
 
- async function analyzeFrame(isManual) {
-    if (isAnalyzing) {
-        if (isManual) {
-            alert('Analysis already in progress. Please wait...');
+        async function analyzeFrame(isManual) {
+            if (isAnalyzing) {
+                if (isManual) {
+                    alert('Analysis already in progress. Please wait...');
+                }
+                return;
+            }
+
+            isAnalyzing = true;
+            
+            // Update UI
+            analyzeNowButton.disabled = true;
+            if (isManual) {
+                analysisStatus.textContent = 'Analysis: Processing (manual)...';
+            } else {
+                analysisStatus.textContent = 'Analysis: Processing (auto)...';
+            }
+
+            try {
+                const imageData = captureFrame();
+                if (!imageData) {
+                    throw new Error('Could not capture frame');
+                }
+
+                const response = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image: imageData,
+                        primaryPrompt: primaryPrompt.value.trim() || 'Describe what you see in this image.',
+                        secondaryPrompt: secondaryPrompt.value.trim() || 'Provide additional insights about this scene.'
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Add to responses
+                const responseEntry = {
+                    timestamp: new Date().toLocaleString(),
+                    primaryPrompt: primaryPrompt.value.trim(),
+                    secondaryPrompt: secondaryPrompt.value.trim(),
+                    primaryResponse: data.primaryResponse,
+                    secondaryResponse: data.secondaryResponse,
+                    isManual: isManual
+                };
+
+                responses.unshift(responseEntry);
+                updateResponsesDisplay();
+                enableExport();
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                
+                const errorEntry = {
+                    timestamp: new Date().toLocaleString(),
+                    primaryPrompt: primaryPrompt.value.trim(),
+                    secondaryPrompt: secondaryPrompt.value.trim(),
+                    primaryResponse: `Error: ${error.message}`,
+                    secondaryResponse: 'Analysis failed',
+                    isManual: isManual,
+                    isError: true
+                };
+
+                responses.unshift(errorEntry);
+                updateResponsesDisplay();
+            } finally {
+                isAnalyzing = false;
+                analyzeNowButton.disabled = false;
+                
+                if (isAnalysisRunning) {
+                    const intervalSeconds = parseInt(analysisInterval.value);
+                    analysisStatus.textContent = `Analysis: Auto (every ${intervalSeconds}s)`;
+                } else {
+                    analysisStatus.textContent = 'Analysis: Stopped';
+                }
+            }
         }
-        return;
-    }
 
-    isAnalyzing = true;
-    analyzeNowButton.disabled = true;
-    analysisStatus.textContent = isManual ? 'Analysis: Processing (manual)...' : 'Analysis: Processing (auto)...';
+        function updateResponsesDisplay() {
+            if (responses.length === 0) {
+                responsesList.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #6c757d;">
+                        No analyses yet. Start the camera and begin analysis to see results here.
+                    </div>
+                `;
+                return;
+            }
 
-    try {
-        const imageData = captureFrame();
-        if (!imageData) throw new Error('Could not capture frame');
-
-        // Step 1: Send primary prompt
-        const primaryPromptText = primaryPrompt.value.trim();
-        const primaryResponse = await fetch(WORKER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: primaryPromptText }),
-        });
-
-        if (!primaryResponse.ok) throw new Error(`Primary failed: HTTP ${primaryResponse.status}`);
-        const primaryData = await primaryResponse.json();
-        const primaryText = primaryData.reply || '[No response]';
-
-        // Step 2: Generate follow-up using secondary prompt + result
-        const secondaryPromptText = secondaryPrompt.value.trim();
-        const combinedFollowup = `${secondaryPromptText}\n\nPrimary said: "${primaryText}"`;
-
-        const secondaryResponse = await fetch(WORKER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: combinedFollowup }),
-        });
-
-        if (!secondaryResponse.ok) throw new Error(`Secondary failed: HTTP ${secondaryResponse.status}`);
-        const secondaryData = await secondaryResponse.json();
-        const secondaryText = secondaryData.reply || '[No response]';
-
-        // Log both
-        const responseEntry = {
-            timestamp: new Date().toLocaleString(),
-            primaryPrompt: primaryPromptText,
-            secondaryPrompt: secondaryPromptText,
-            primaryResponse: primaryText,
-            secondaryResponse: secondaryText,
-            isManual: isManual
-        };
-
-        responses.unshift(responseEntry);
-        updateResponsesDisplay();
-        enableExport();
-
-    } catch (error) {
-        console.error('Analysis error:', error);
-        responses.unshift({
-            timestamp: new Date().toLocaleString(),
-            primaryPrompt: primaryPrompt.value.trim(),
-            secondaryPrompt: secondaryPrompt.value.trim(),
-            primaryResponse: `Error: ${error.message}`,
-            secondaryResponse: 'Analysis failed',
-            isManual: isManual,
-            isError: true
-        });
-        updateResponsesDisplay();
-    } finally {
-        isAnalyzing = false;
-        analyzeNowButton.disabled = false;
-        analysisStatus.textContent = isAnalysisRunning
-            ? `Analysis: Auto (every ${parseInt(analysisInterval.value)}s)`
-            : 'Analysis: Stopped';
-    }
-}
-async function analyzeFrame(isManual) {
-    if (isAnalyzing) {
-        if (isManual) {
-            alert('Analysis already in progress. Please wait...');
+            responsesList.innerHTML = responses.map(response => `
+                <div class="response-entry ${response.isError ? 'error' : ''}">
+                    <div class="response-header">
+                        ${response.timestamp} • ${response.isManual ? 'Manual' : 'Auto'} Analysis
+                        ${response.isError ? ' • ERROR' : ''}
+                    </div>
+                    <div class="primary-response">
+                        <div class="response-label">Primary Analysis</div>
+                        <div class="response-text">${response.primaryResponse}</div>
+                    </div>
+                    <div class="secondary-response">
+                        <div class="response-label">Follow-up Analysis</div>
+                        <div class="response-text">${response.secondaryResponse}</div>
+                    </div>
+                </div>
+            `).join('');
         }
-        return;
-    }
-
-    isAnalyzing = true;
-    analyzeNowButton.disabled = true;
-    analysisStatus.textContent = isManual ? 'Analysis: Processing (manual)...' : 'Analysis: Processing (auto)...';
-
-    try {
-        const imageData = captureFrame();
-        if (!imageData) throw new Error('Could not capture frame');
-
-        // Step 1: Send primary prompt
-        const primaryPromptText = primaryPrompt.value.trim();
-        const primaryResponse = await fetch(WORKER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: primaryPromptText }),
-        });
-
-        if (!primaryResponse.ok) throw new Error(`Primary failed: HTTP ${primaryResponse.status}`);
-        const primaryData = await primaryResponse.json();
-        const primaryText = primaryData.reply || '[No response]';
-
-        // Step 2: Generate follow-up using secondary prompt + result
-        const secondaryPromptText = secondaryPrompt.value.trim();
-        const combinedFollowup = `${secondaryPromptText}\n\nPrimary said: "${primaryText}"`;
-
-        const secondaryResponse = await fetch(WORKER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: combinedFollowup }),
-        });
-
-        if (!secondaryResponse.ok) throw new Error(`Secondary failed: HTTP ${secondaryResponse.status}`);
-        const secondaryData = await secondaryResponse.json();
-        const secondaryText = secondaryData.reply || '[No response]';
-
-        // Log both
-        const responseEntry = {
-            timestamp: new Date().toLocaleString(),
-            primaryPrompt: primaryPromptText,
-            secondaryPrompt: secondaryPromptText,
-            primaryResponse: primaryText,
-            secondaryResponse: secondaryText,
-            isManual: isManual
-        };
-
-        responses.unshift(responseEntry);
-        updateResponsesDisplay();
-        enableExport();
-
-    } catch (error) {
-        console.error('Analysis error:', error);
-        responses.unshift({
-            timestamp: new Date().toLocaleString(),
-            primaryPrompt: primaryPrompt.value.trim(),
-            secondaryPrompt: secondaryPrompt.value.trim(),
-            primaryResponse: `Error: ${error.message}`,
-            secondaryResponse: 'Analysis failed',
-            isManual: isManual,
-            isError: true
-        });
-        updateResponsesDisplay();
-    } finally {
-        isAnalyzing = false;
-        analyzeNowButton.disabled = false;
-        analysisStatus.textContent = isAnalysisRunning
-            ? `Analysis: Auto (every ${parseInt(analysisInterval.value)}s)`
-            : 'Analysis: Stopped';
-    }
-}
-
 
         function enableExport() {
             exportButton.disabled = responses.length === 0;
